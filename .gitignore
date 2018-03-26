@@ -1,0 +1,6 @@
+target
+*~
+# Arquivos do eclipse
+.classpath
+.project
+.settings
