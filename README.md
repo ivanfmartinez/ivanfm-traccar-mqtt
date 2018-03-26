@@ -40,4 +40,33 @@ device configuration parameters :
 		default - does not publish changes in other topics
 
 
+Sample published data on mqtt:
+```
+/traccar/device/ivan/id 1
+/traccar/device/ivan/name ZF3 - Ivanfm
+/traccar/device/ivan/category person
+/traccar/device/ivan/phone +5511999999999
+/traccar/device/ivan/valid true
+/traccar/device/ivan/latlon -99.999999,-99.999999
+/traccar/device/ivan/fixtime 2018-03-25T23:59:23Z
+/traccar/device/ivan/speed 0.0
+/traccar/device/ivan/altitude 0.0
+/traccar/device/ivan/protocol osmand
+/traccar/device/ivan/attr/batteryLevel 40.0
+/traccar/device/ivan/attr/alarm sos
+/traccar/device/ivan/attr/distance 0.0
+/traccar/device/ivan/attr/totalDistance 7.72461427E7
+/traccar/device/ivan/geofence/fence1 1|30|1
+/traccar/device/ivan/geofence/fence2 0|17342|0
+/traccar/device/ivan/geofence/fence3 0|10906|0
+/traccar/device/ivan/geofence/fence4 0|28285|0
+/traccar/device/ivan/geofence/fence5 0|30489|0
+```
+
+For geofences the value format is : ___IN-OUT-CURRENT|DISTANCE-FROM-CENTER|IN-OUT-PREVIOUS___
+
+* IN-OUT-* -  0 OUTSIDE -  1 INSIDE
+* ___DISTANCE-FROM-CENTER___  calculated only for circles
+
+
 
