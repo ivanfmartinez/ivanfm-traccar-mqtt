@@ -8,11 +8,15 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
-import org.traccar.helper.Log;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class MQTTPublisher implements MqttCallback {
 
 	public static final int AT_LEAST_ONCE = 1;
+	private static final Logger LOGGER = LoggerFactory.getLogger(MQTTPublisher.class);
 	
 	private final MqttAsyncClient mqtt;
 	private final String rootTopic;
@@ -33,7 +37,7 @@ public class MQTTPublisher implements MqttCallback {
 			boolean running = true; 
 			while (running) {
 				try {
-					Log.info("trying to connect to mqtt : " + mqtt.getServerURI());
+					LOGGER.info("trying to connect to mqtt : " + mqtt.getServerURI());
 					final MqttConnectOptions opt = new MqttConnectOptions();
 				    opt.setCleanSession(false);
 				     
@@ -41,7 +45,7 @@ public class MQTTPublisher implements MqttCallback {
 					connectToken.waitForCompletion(2000);
 					running = false;
 				} catch (MqttException e) {
-					Log.warning("Connect error", e);
+					LOGGER.warn("Connect error", e);
 				}
 				try {
 					Thread.sleep(5000);
@@ -49,7 +53,7 @@ public class MQTTPublisher implements MqttCallback {
 					break;
 				}
 			}
-			Log.info("connected to mqtt : " + mqtt.getServerURI());
+			LOGGER.info("connected to mqtt : " + mqtt.getServerURI());
 			
 		}
 	}
@@ -62,7 +66,7 @@ public class MQTTPublisher implements MqttCallback {
 			try {
 				Thread.sleep(10);
 			} catch (InterruptedException e) {
-				Log.warning(e);
+				LOGGER.warn("Error waiting for mqtt conection", e);
 			}
 		}
 	}
@@ -101,12 +105,12 @@ public class MQTTPublisher implements MqttCallback {
 				mqtt.publish(topic, msg, qos , retained);
 				ok = true;
 			} catch (MqttPersistenceException e) {
-				Log.warning("Error in mqtt publish", e);
+				LOGGER.warn("Error in mqtt publish", e);
 			} catch (MqttException e) {
 				if ((e.getReasonCode() == MqttException.REASON_CODE_MAX_INFLIGHT) && (retryCount < MAX_RETRY)) {
 					// ignore 
 				} else {
-					Log.warning("error publising to mqtt" , e);
+					LOGGER.warn("error publising to mqtt" , e);
 				}
 			}
 		} while (!ok && (retryCount < MAX_RETRY));

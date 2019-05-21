@@ -5,7 +5,7 @@ import java.util.Date;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.traccar.BaseDataHandler;
-import org.traccar.Config;
+import org.traccar.config.Config;
 import org.traccar.Context;
 import org.traccar.model.Position;
 
