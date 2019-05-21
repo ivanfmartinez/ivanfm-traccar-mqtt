@@ -3,6 +3,9 @@ package com.ivanfm.traccar.mqtt;
 import java.io.StringWriter;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -35,7 +38,7 @@ public class ProcessPosition {
 	final Device device;
 	private final String devAlias;
 	private final Event event;
-	private final String alarmTopic;
+	private final List<String> alarmTopics;
 	private final User user;
 	private final DeviceManager dm = Context.getDeviceManager();
 	private final GeofenceManager gm = Context.getGeofenceManager();
@@ -53,10 +56,25 @@ public class ProcessPosition {
 		user = Context.getPermissionsManager().getUser( users.isEmpty() ? 1 : users.iterator().next() );
 
 		devAlias = nameCleanUp(dm.lookupAttributeString(position.getDeviceId(), "mqtt.alias", device.getName(), false));
-		alarmTopic = dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopic", "", true);
+		// Current configuration should user alarmTopics instead of alarmTopic
+		alarmTopics = splitTopics(dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopics", dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopic", "", true), true));
 		
 		event = new Event("MQTTX", position.getDeviceId(), position.getId());
 		
+	}
+	
+	private List<String> splitTopics(String topics) {
+		final List<String> split = Arrays.asList(topics.split(":"));
+		int x = 0;
+		while (x < split.size()) {
+			if (StringUtils.isBlank(split.get(x))) {
+				split.remove(x);
+			} else {
+				x++;
+			}
+		}
+		
+		return split;
 	}
 	
 	void publish(String path, String value) {
@@ -108,6 +126,7 @@ public class ProcessPosition {
 			publish("fixtime", ISO_8601_Z.format(position.getFixTime()));
 			publish("speed", Double.toString(position.getSpeed()));
 			publish("altitude", Double.toString(position.getAltitude()));
+			publish("accuracy", Double.toString(position.getAccuracy()));
 			publishIfNotBlank("type", position.getType());
 			publishIfNotBlank("protocol", position.getProtocol());
 			for (Entry<String,Object> e : attrs.entrySet()) {
@@ -118,7 +137,7 @@ public class ProcessPosition {
 		}
 
 		if (dm.lookupAttributeBoolean(device.getId(), "mqtt.position.process.alarms.enabled", true, true)) {
-			if (alarmTopic.length() > 0) {
+			if (alarmTopics.size() > 0) {
 				publishAlarm(attrs);
 			}
 		}
@@ -130,7 +149,7 @@ public class ProcessPosition {
 			final Geofence g = gm.getById(geofenceId);
 			final String geofenceAlias = nameCleanUp(g.getName());
 			final GeofenceGeometry geometry = g.getGeometry(); 
-			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude());
+			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude(), position.getAccuracy());
 			stateChanged = processGeofence(g, geofenceAlias, inside) || stateChanged;
 		}
 		if (stateChanged) {
@@ -144,7 +163,7 @@ public class ProcessPosition {
 
 	private boolean processGeofence(Geofence geofence, String geofenceAlias, boolean inside) {
 		final String topicsSt = dm.lookupAttributeString(position.getDeviceId(), "mqtt.geofence." + geofenceAlias + ".topics", "", false);
-		final String[] topics = StringUtils.isNotBlank(topicsSt) ? topicsSt.split(":") : new String[0];
+		final List<String> topics = StringUtils.isNotBlank(topicsSt) ? splitTopics(topicsSt) : new ArrayList<>();
 		final String insideSt = inside ? "1" : "0";
 
 		// Use attribute to keep state control even when traccar is restarted
@@ -161,7 +180,7 @@ public class ProcessPosition {
 				    final VelocityContext velocityContext = prepareContext();
 					velocityContext.put("geofence", geofence);
 					velocityContext.put("areaName", geofence.getName());
-					velocityContext.put("in_out", "1".equals(insideSt) ? "IN" : "OUT");
+					velocityContext.put("in_out", inside ? "IN" : "OUT");
 					velocityContext.put("distance", ""+distance);
 										
 					publisher.publishOnRoot(topic,  
@@ -195,9 +214,11 @@ public class ProcessPosition {
 
 				    final VelocityContext velocityContext = prepareContext();
 							
-					publisher.publishOnRoot(alarmTopic, 
-							format(velocityContext, "mqtt-alarm/").getBytes(),
-							MQTTPublisher.AT_LEAST_ONCE, false);
+				    for (String alarmTopic : alarmTopics) {
+						publisher.publishOnRoot(alarmTopic, 
+								format(velocityContext, "mqtt-alarm/").getBytes(),
+								MQTTPublisher.AT_LEAST_ONCE, false);
+				    }
 				}
 			}
 		}
