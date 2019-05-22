@@ -1,6 +1,6 @@
 MQTT basic implementation for traccar
 
- Requires traccar 3.16-SNAPSHOT after 2018-03-25
+ Requires traccar 4.5 or later
 
 global configuration parameters :
 
@@ -38,6 +38,19 @@ device configuration parameters :
 		where to publish geofence state changes for device
 		multiple topics can be used separated by ":"
 		default - does not publish changes in other topics
+
+
+in case of errors please use the configuration :
+
+	logger.fullStackTraces
+		true 
+
+To use this handler you must add it to your CLASSPATH environment or include
+it in your execution command:
+
+	
+	java -cp ivanfm-traccar-mqtt-2.2.3-jar-with-dependencies.jar -jar tracker-server.jar conf/traccar.xml
+
 
 
 Sample published data on mqtt:

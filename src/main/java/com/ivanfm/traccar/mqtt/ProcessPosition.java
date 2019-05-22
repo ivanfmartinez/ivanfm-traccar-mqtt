@@ -149,7 +149,9 @@ public class ProcessPosition {
 			final Geofence g = gm.getById(geofenceId);
 			final String geofenceAlias = nameCleanUp(g.getName());
 			final GeofenceGeometry geometry = g.getGeometry(); 
-			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude(), position.getAccuracy());
+// if running with the changes to support accuracy in  geometry use this line
+//			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude(), position.getAccuracy());
+			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude());
 			stateChanged = processGeofence(g, geofenceAlias, inside) || stateChanged;
 		}
 		if (stateChanged) {
