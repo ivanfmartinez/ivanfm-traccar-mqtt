@@ -5,7 +5,7 @@ MQTT basic implementation for traccar
 global configuration parameters :
 
 	extra.handlers -
-		should point to : com.ivanfm.traccar.MQTTHandler
+		should point to : com.ivanfm.traccar.mqtt.MQTTHandler
 
 	mqtt.url
 		URL for mqtt server
