@@ -2,7 +2,7 @@ MQTT basic implementation for traccar
 
  Requires traccar 4.5 or later
 
-global configuration parameters :
+global configuration parameters ( conf/traccar.xml ):
 
 	extra.handlers -
 		should point to : com.ivanfm.traccar.mqtt.MQTTHandler
@@ -16,17 +16,19 @@ global configuration parameters :
 	mqtt.topicRoot
 		topic where traccar data will be published
 		default value /traccar/
-	mqtt.alarmTopic
-		topic where alarms will be published
-		default - does not publish alarms in other topic
+	mqtt.alarmTopics
+		topics where alarms will be published 
+		multiple topics can be used separated by ":"
+		default - does not publish alarms 
 
-device configuration parameters :
+device configuration attributes (attributes button while editing device) :
 	
 	mqtt.alias
 		alias to be used instead of device name
 		default - name of device
-	mqtt.alarmTopic
+	mqtt.alarmTopics
 		topic where alarms will be published
+		multiple topics can be used separated by ":"
 		default - does not publish alarms in other topic
 	mqtt.position.process.enabled
 		enabled/disable publishing for the device
@@ -40,7 +42,7 @@ device configuration parameters :
 		default - does not publish changes in other topics
 
 
-in case of errors please use the configuration :
+in case of errors please use the configuration in conf/traccar.xml :
 
 	logger.fullStackTraces
 		true 
@@ -49,7 +51,9 @@ To use this handler you must add it to your CLASSPATH environment or include
 it in your execution command:
 
 	
-	java -cp ivanfm-traccar-mqtt-2.2.3-jar-with-dependencies.jar -jar tracker-server.jar conf/traccar.xml
+	java -cp ivanfm-traccar-mqtt-2.2.3-jar-with-dependencies.jar:tracker-server.jar org.traccar.Main conf/traccar.xml
+
+
 
 
 
