@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -56,25 +57,29 @@ public class ProcessPosition {
 		user = Context.getPermissionsManager().getUser( users.isEmpty() ? 1 : users.iterator().next() );
 
 		devAlias = nameCleanUp(dm.lookupAttributeString(position.getDeviceId(), "mqtt.alias", device.getName(), false));
-		// Current configuration should user alarmTopics instead of alarmTopic
+		// Current configuration should use alarmTopics instead of alarmTopic
 		alarmTopics = splitTopics(dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopics", dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopic", "", true), true));
 		
 		event = new Event("MQTTX", position.getDeviceId(), position.getId());
 		
 	}
 	
-	private List<String> splitTopics(String topics) {
-		final List<String> split = Arrays.asList(topics.split(":"));
-		int x = 0;
-		while (x < split.size()) {
-			if (StringUtils.isBlank(split.get(x))) {
-				split.remove(x);
-			} else {
-				x++;
+	private static List<String> splitTopics(String topics) {
+		if (StringUtils.isNotBlank(topics)) {
+			final List<String> split = new ArrayList<>(Arrays.asList(topics.split(":")));
+			int x = 0;
+			while (x < split.size()) {
+				if (StringUtils.isBlank(split.get(x))) {
+					split.remove(x);
+				} else {
+					x++;
+				}
 			}
-		}
 		
-		return split;
+			return split;
+		} else {
+			return Collections.<String>emptyList();
+		}
 	}
 	
 	void publish(String path, String value) {
@@ -100,8 +105,6 @@ public class ProcessPosition {
 	}
 
 	
-
-
 
 	void publish() {
 		final Map<String,Object> attrs = position.getAttributes();
@@ -137,7 +140,7 @@ public class ProcessPosition {
 		}
 
 		if (dm.lookupAttributeBoolean(device.getId(), "mqtt.position.process.alarms.enabled", true, true)) {
-			if (alarmTopics.size() > 0) {
+			if (!alarmTopics.isEmpty()) {
 				publishAlarm(attrs);
 			}
 		}
@@ -165,7 +168,7 @@ public class ProcessPosition {
 
 	private boolean processGeofence(Geofence geofence, String geofenceAlias, boolean inside) {
 		final String topicsSt = dm.lookupAttributeString(position.getDeviceId(), "mqtt.geofence." + geofenceAlias + ".topics", "", false);
-		final List<String> topics = StringUtils.isNotBlank(topicsSt) ? splitTopics(topicsSt) : new ArrayList<>();
+		final List<String> topics = splitTopics(topicsSt);
 		final String insideSt = inside ? "1" : "0";
 
 		// Use attribute to keep state control even when traccar is restarted
@@ -178,17 +181,15 @@ public class ProcessPosition {
 		if (!insideSt.equalsIgnoreCase(prevInside)) {
 			device.set(insideKey, insideSt);
 			for (String topic : topics) {
-				if (StringUtils.isNotBlank(topic)) {
-				    final VelocityContext velocityContext = prepareContext();
-					velocityContext.put("geofence", geofence);
-					velocityContext.put("areaName", geofence.getName());
-					velocityContext.put("in_out", inside ? "IN" : "OUT");
-					velocityContext.put("distance", ""+distance);
+			    final VelocityContext velocityContext = prepareContext();
+				velocityContext.put("geofence", geofence);
+				velocityContext.put("areaName", geofence.getName());
+				velocityContext.put("in_out", inside ? "IN" : "OUT");
+				velocityContext.put("distance", ""+distance);
 										
-					publisher.publishOnRoot(topic,  
-							format(velocityContext, "mqtt-moved/").getBytes(), 
-							MQTTPublisher.AT_LEAST_ONCE, false);
-				}
+				publisher.publishOnRoot(topic,  
+						format(velocityContext, "mqtt-moved/").getBytes(), 
+						MQTTPublisher.AT_LEAST_ONCE, false);
 			}
 			return true;
 		} else {
