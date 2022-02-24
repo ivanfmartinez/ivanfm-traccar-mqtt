@@ -86,6 +86,10 @@ public class MQTTPublisher implements MqttCallback {
 
 
 
+	public void publish(String topic, String msg) {
+		publishOnRoot(rootTopic + topic, msg.getBytes(), AT_LEAST_ONCE, false);
+	}
+	
 	public void publish(String topic, byte[] msg) {
 		publishOnRoot(rootTopic + topic, msg, AT_LEAST_ONCE, false);
 	}

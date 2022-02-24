@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.TimeZone;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.VelocityContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,8 @@ import org.traccar.model.Geofence;
 import org.traccar.model.Position;
 import org.traccar.model.User;
 import org.traccar.notification.NotificationFormatter;
+import org.traccar.notification.NotificationMessage;
+import org.traccar.notification.TextTemplateFormatter;
 
 import com.ivanfm.mqtt.MQTTPublisher;
 
@@ -56,11 +59,11 @@ public class ProcessPosition {
 		final Set<Long> users =  dm.getUserItems(device.getId());
 		user = Context.getPermissionsManager().getUser( users.isEmpty() ? 1 : users.iterator().next() );
 
-		devAlias = nameCleanUp(dm.lookupAttributeString(position.getDeviceId(), "mqtt.alias", device.getName(), false));
+		devAlias = nameCleanUp(dm.lookupAttributeString(position.getDeviceId(), "mqtt.alias", device.getName(), true, false));
 		// Current configuration should use alarmTopics instead of alarmTopic
-		alarmTopics = splitTopics(dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopics", dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopic", "", true), true));
+		alarmTopics = splitTopics(dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopics", dm.lookupAttributeString(position.getDeviceId(), "mqtt.alarmTopic", "", true, true), true, true));
 		
-		event = new Event("MQTTX", position.getDeviceId(), position.getId());
+		event = new Event("MQTTX", position);
 		
 	}
 	
@@ -83,18 +86,18 @@ public class ProcessPosition {
 	}
 	
 	void publish(String path, String value) {
-		publisher.publish("device/" +  devAlias + "/" + path , value.getBytes());
+		publisher.publish("device/" +  devAlias + "/" + path , value);
 	}
 
 	private void publishIfNotBlank(String path, String value) {
 		if (StringUtils.isNotBlank(value)) {
-			publisher.publish("device/" +  devAlias + "/" + path , value.getBytes());
+			publisher.publish("device/" +  devAlias + "/" + path , value);
 		}
 	}
 
 	private void publishIfNotZero(String path, long value) {
 		if (value > 0) {
-			publisher.publish("device/" +  devAlias + "/" + path , Long.toString(value).getBytes());
+			publisher.publish("device/" +  devAlias + "/" + path , Long.toString(value));
 		}
 	}
 
@@ -108,7 +111,7 @@ public class ProcessPosition {
 
 	void publish() {
 		final Map<String,Object> attrs = position.getAttributes();
-		if (dm.lookupAttributeBoolean(device.getId(), "mqtt.position.process.enabled", true, true)) {
+		if (dm.lookupAttributeBoolean(device.getId(), "mqtt.position.process.enabled", true, true, true)) {
 			final SimpleDateFormat ISO_8601_Z = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 			ISO_8601_Z.setTimeZone(TimeZone.getTimeZone("UTC"));
 			/**
@@ -139,7 +142,7 @@ public class ProcessPosition {
 			processGeofences();
 		}
 
-		if (dm.lookupAttributeBoolean(device.getId(), "mqtt.position.process.alarms.enabled", true, true)) {
+		if (dm.lookupAttributeBoolean(device.getId(), "mqtt.position.process.alarms.enabled", true, true, true)) {
 			if (!alarmTopics.isEmpty()) {
 				publishAlarm(attrs);
 			}
@@ -153,8 +156,8 @@ public class ProcessPosition {
 			final String geofenceAlias = nameCleanUp(g.getName());
 			final GeofenceGeometry geometry = g.getGeometry(); 
 // if running with the changes to support accuracy in  geometry use this line
-//			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude(), position.getAccuracy());
-			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude());
+			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude(), position.getAccuracy());
+//			final boolean inside = geometry.containsPoint(position.getLatitude(), position.getLongitude());
 			stateChanged = processGeofence(g, geofenceAlias, inside) || stateChanged;
 		}
 		if (stateChanged) {
@@ -167,7 +170,7 @@ public class ProcessPosition {
 	}
 
 	private boolean processGeofence(Geofence geofence, String geofenceAlias, boolean inside) {
-		final String topicsSt = dm.lookupAttributeString(position.getDeviceId(), "mqtt.geofence." + geofenceAlias + ".topics", "", false);
+		final String topicsSt = dm.lookupAttributeString(position.getDeviceId(), "mqtt.geofence." + geofenceAlias + ".topics", "", true, false);
 		final List<String> topics = splitTopics(topicsSt);
 		final String insideSt = inside ? "1" : "0";
 
@@ -181,7 +184,8 @@ public class ProcessPosition {
 		if (!insideSt.equalsIgnoreCase(prevInside)) {
 			device.set(insideKey, insideSt);
 			for (String topic : topics) {
-			    final VelocityContext velocityContext = prepareContext();
+			    try {
+   			        final VelocityContext velocityContext = prepareContext();
 				velocityContext.put("geofence", geofence);
 				velocityContext.put("areaName", geofence.getName());
 				velocityContext.put("in_out", inside ? "IN" : "OUT");
@@ -190,6 +194,9 @@ public class ProcessPosition {
 				publisher.publishOnRoot(topic,  
 						format(velocityContext, "mqtt-moved/").getBytes(), 
 						MQTTPublisher.AT_LEAST_ONCE, false);
+			    } catch (org.apache.velocity.exception.ResourceNotFoundException e) {
+			        log.debug("{}", e.getMessage());
+			    }
 			}
 			return true;
 		} else {
@@ -215,12 +222,16 @@ public class ProcessPosition {
 			if (alarm.length() > 0) {
 				if (!"tracker".equalsIgnoreCase(alarm) && !"et".equalsIgnoreCase(alarm)) {
 
-				    final VelocityContext velocityContext = prepareContext();
+				    try {
+				        final VelocityContext velocityContext = prepareContext();
 							
-				    for (String alarmTopic : alarmTopics) {
-						publisher.publishOnRoot(alarmTopic, 
+    				        for (String alarmTopic : alarmTopics) {
+   						publisher.publishOnRoot(alarmTopic, 
 								format(velocityContext, "mqtt-alarm/").getBytes(),
 								MQTTPublisher.AT_LEAST_ONCE, false);
+				        }
+				    } catch (ResourceNotFoundException e) {
+   			                log.debug("{}", e.getMessage());
 				    }
 				}
 			}
@@ -234,9 +245,8 @@ public class ProcessPosition {
 	}
 	
 	String format(VelocityContext velocityContext, String path) {
-		final StringWriter writer = new StringWriter();
-		NotificationFormatter.getTemplate(event, path).merge(velocityContext, writer);
-		return writer.toString();
+	        NotificationMessage message = TextTemplateFormatter.formatMessage(velocityContext, event.getType(), path);
+		return message.getBody();
 	}
 	
 	

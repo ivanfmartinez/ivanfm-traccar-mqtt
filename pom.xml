@@ -5,17 +5,19 @@
 	<groupId>com.ivanfm</groupId>
 	<artifactId>ivanfm-traccar-mqtt</artifactId>
 	<packaging>jar</packaging>
-	<version>2.2.3</version>
+	<version>2.2.7</version>
 	<name>ivanfm-traccar-mqtt</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<slf4j.version>1.7.26</slf4j.version>
-		<junit.version>4.13.1</junit.version>
+		<slf4j.version>1.7.31</slf4j.version>
+		<junit.version>4.13.2</junit.version>
 		<velocity.version>1.7</velocity.version>
-		<maven-compiler-plugin.version>3.5.1</maven-compiler-plugin.version>
-		<paho-mqttv3.version>1.2.1</paho-mqttv3.version>
+		<paho-mqttv3.version>1.2.5</paho-mqttv3.version>
+		<traccar.version>4.15-ifm</traccar.version>
+
+		<maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
 	</properties>
 
 
@@ -34,12 +36,14 @@
 
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
-				<version>2.6</version>
+				<version>3.2.0</version>
 				<configuration>
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 
+					<finalName>${project.artifactId}-${project.version}-traccar-${traccar.version}</finalName>
+					
 					<archive>
 						<manifest>
 						</manifest>
@@ -93,7 +97,7 @@
 		<dependency>
 			<groupId>org.traccar</groupId>
 			<artifactId>traccar</artifactId>
-			<version>4.5-SNAPSHOT</version>
+			<version>${traccar.version}</version>
 			<scope>provided</scope>
 		</dependency>
 

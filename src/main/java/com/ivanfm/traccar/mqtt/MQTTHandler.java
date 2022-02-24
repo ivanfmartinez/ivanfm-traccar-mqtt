@@ -27,7 +27,7 @@ public class MQTTHandler extends BaseDataHandler {
 						config.getString("mqtt.clientid", "traccar.mqtt.handler"),
 						config.getString("mqtt.topicRoot", "/traccar/"));
 
-				globalPublisher.publish("start", (new Date()).toString().getBytes());
+				globalPublisher.publish("start", (new Date()).toString());
 			} catch (Exception e) {
 				log.error("", e);
 			}
