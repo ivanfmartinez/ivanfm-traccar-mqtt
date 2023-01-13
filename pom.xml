@@ -5,13 +5,13 @@
 	<groupId>com.ivanfm</groupId>
 	<artifactId>ivanfm-traccar-mqtt</artifactId>
 	<packaging>jar</packaging>
-	<version>2.2.7</version>
+	<version>2.2.9</version>
 	<name>ivanfm-traccar-mqtt</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<slf4j.version>1.7.31</slf4j.version>
+		<slf4j.version>1.7.36</slf4j.version>
 		<junit.version>4.13.2</junit.version>
 		<velocity.version>1.7</velocity.version>
 		<paho-mqttv3.version>1.2.5</paho-mqttv3.version>
